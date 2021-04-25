@@ -5,6 +5,7 @@ import lexington.GalleryAPI.Crawler_title;
 import lexington.GalleryAPI.GUI.mainScene;
 import lexington.GalleryAPI.Gallery;
 import lexington.GalleryAPI.Objects.Article;
+import lexington.GalleryAPI.RecommendBot;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.openqa.selenium.By;
@@ -21,20 +22,18 @@ import java.util.Map;
 
 
 public class Main {
-    public static final int TITLES_IN_PAGE = 100;
-    public static  final int REC_THRESHOLD = 8;
+    public static final int TITLES_IN_PAGE = 50;
+    public static  final int REC_THRESHOLD = 10;
     public static  final int MAX_PAGE_NUMBER = 1;
-    public static final String GALL_ID = "nijidon";
+    public static final String GALL_ID = "lilyfever";
     public static  final boolean IS_MAJOR = false;
     public static ArrayList<Article> static_articles;
 
-    public static ChromeDriver driver;
-    public static String recommendScript = "for (var i = 0; i < 5; i++) {\n" +
-            "document.getElementById(\"recommend_join\").click();\n" +
-            "}";
+    public static mainScene mc;
 
     public static void main(String[] args) throws IOException, InterruptedException {
-        recommendphoenix();
+        InitialiseUI();
+        DoKotlinRecommend();
 
        // go();
     }
@@ -50,6 +49,7 @@ public class Main {
 
         Crawler crawler = new Crawler_title(mc, gall, 1, MAX_PAGE_NUMBER, 1);
         crawler.scrollRaw();
+
 
         static_articles = crawler.getArticles();
         for (int i = 0; i < static_articles.size(); i++) {
@@ -77,16 +77,14 @@ public class Main {
 
 
     }
-
-    public static void recommendphoenix() throws InterruptedException {
-        mainScene mc = new mainScene();
+    public static void InitialiseUI(){
+        mc = new mainScene();
         mc.initUI();
 
-
+    }
+    public static void DoRecommendBot() throws InterruptedException {
         Gallery gall = new Gallery();
-
         gall.setInfo(GALL_ID, IS_MAJOR);
-
         Crawler crawler = new Crawler_title(mc, gall, 1, MAX_PAGE_NUMBER, 1);
         crawler.scrollRaw();
 
@@ -94,90 +92,36 @@ public class Main {
         System.out.println(articles.size());
         boolean userDriver = false;
         if (userDriver) {
-            InitialiseDriver();
-
-            for (int i = 0; i < articles.size(); i++) {
-                RemoveNotifications();
-                System.out.println(articles.get(i).getURL());
-                if(articles.get(i).recommend >REC_THRESHOLD )continue;
-                try {
-                    driver.get("https://gall.dcinside.com" + articles.get(i).getURL());
-                  //  MoveToComment();
-                    DoPhysicalRecommend();
-                    //DoScriptRecommend();
-                } catch (Exception e) {
-
-                }
-            }
-            driver.quit();
+            RecommendBot bot = new RecommendBot();
+            bot.InitailiseDriver();
+            bot.DoMyAction(articles);
         } else {
-            int i =0;
-            for (Article article : articles) {
-                if(article.recommend >= REC_THRESHOLD) continue;
-                if(i++>70) break;
-                int articleId = article.id;
-                KotlinTest kt = new KotlinTest();
-                kt.initKotlinInside();
-                kt.testArticleVote(GALL_ID,articleId);
-                Thread.sleep(10);
-            }
+
         }
 
 
     }
+    public static void DoKotlinRecommend()throws InterruptedException {
+        Gallery gall = new Gallery();
+        gall.setInfo(GALL_ID, IS_MAJOR);
+        Crawler crawler = new Crawler_title(mc, gall, 1, MAX_PAGE_NUMBER, 1);
+        crawler.scrollRaw();
+        ArrayList<Article> articles = crawler.getArticles();
 
-    private static void InitialiseDriver() {
-        System.setProperty("webdriver.chrome.driver", "chromedriver.exe");
-        Map<String, String> mobileEmulation = new HashMap<>();
-        mobileEmulation.put("deviceName", "Nexus 5");
-        ChromeOptions options = new ChromeOptions();
-        options.setExperimentalOption("mobileEmulation", mobileEmulation);
-        HashMap<String, Object> prefs = new HashMap<String, Object>();
-        prefs.put("profile.managed_default_content_settings.images", 2);
-        options.setExperimentalOption("prefs", prefs);
-        driver = new ChromeDriver(options);
-    }
-
-    private static void DoScriptRecommend() {
-
-        JavascriptExecutor executor = (JavascriptExecutor) driver;
-        executor.executeScript(recommendScript);
-        RemoveNotifications();
-    }
-
-    private static void DoPhysicalRecommend() {
-        WebElement button = driver.findElement(By.id("recommend_join"));
-        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", button);
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        Actions actions = new Actions(driver);
-        actions.moveToElement(button).perform();
-        button.click();
-    }
-
-    private static void MoveToComment() {
-        //Move to comment
-        WebElement memo = driver.findElement(By.id("comment_memo"));
-        memo.sendKeys(" ");
-        WebElement element2 = driver.findElement(By.cssSelector("button[class=btn-comment-write]"));
-        Actions actions2 = new Actions(driver);
-        actions2.moveToElement(element2).perform();
-    }
-
-    public static void RemoveNotifications() {
-        while (true) {
-            try {
-                Thread.sleep(50);
-                driver.switchTo().alert().accept();
-            } catch (Exception e) {
-                break;
-            }
+        int i =0;
+        for (Article article : articles) {
+            if(article.recommend >= REC_THRESHOLD) continue;
+            int articleId = article.id;
+            KotlinTest kt = new KotlinTest();
+            kt.initKotlinInside();
+            kt.testArticleVote(GALL_ID,articleId);
+            Thread.sleep(10);
         }
 
     }
+
+
+
 
 
 }
